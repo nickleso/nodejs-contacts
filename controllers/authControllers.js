@@ -1,11 +1,14 @@
-const path = require("path");
 const fs = require("fs/promises");
+const path = require("path");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+
 const gravatar = require("gravatar");
+const resizedAvatar = require("../helpers/imageResizer");
 
 require("dotenv").config();
 const SECRET_KEY = process.env.SECRET;
+const avatarsDir = path.join(__dirname, "../", "public", "avatars");
 
 const { User } = require("../models/userModels");
 
@@ -68,6 +71,9 @@ const ctrlLogin = async (req, res, next) => {
       status: "success",
       code: 200,
       data: {
+        user: {
+          email,
+        },
         token,
       },
     });
@@ -134,18 +140,19 @@ const ctrlUpdateCurrent = async (req, res, next) => {
   }
 };
 
-const avatarsDir = path.join(__dirname, "../", "public", "avatars");
-
-const ctrlUpdateAvatart = async (req, res, next) => {
+const ctrlUpdateAvatar = async (req, res, next) => {
   const { path: tempUpload, originalname } = req.file;
   const { _id: id } = req.user;
   const imageName = `${id}_${originalname}`;
 
   try {
     const resultUpload = path.join(avatarsDir, imageName);
+
     await fs.rename(tempUpload, resultUpload);
+    await resizedAvatar(resultUpload);
 
     const avatarURL = path.join("public", "avatars", imageName);
+
     await User.findByIdAndUpdate(req.user._id, { avatarURL });
 
     res.json({
@@ -167,5 +174,5 @@ module.exports = {
   ctrlCurrent,
   ctrlLogout,
   ctrlUpdateCurrent,
-  ctrlUpdateAvatart,
+  ctrlUpdateAvatar,
 };
