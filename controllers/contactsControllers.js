@@ -5,7 +5,6 @@ const {
   removeContact,
   updateContact,
   updateContactStatus,
-  getContactByFavorite,
 } = require("../servises/contactsService");
 
 const {

@@ -8,7 +8,6 @@ const {
   ctrlRemoveContact,
   ctrlUpdateStatusContact,
   ctrlUpdateContact,
-  ctrlGetContactByFavorite,
 } = require("../../controllers/contactsControllers");
 
 const { auth } = require("../../middlewares/auth");

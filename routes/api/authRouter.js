@@ -7,7 +7,7 @@ const {
   ctrlCurrent,
   ctrlLogout,
   ctrlUpdateCurrent,
-  ctrlUpdateAvatart,
+  ctrlUpdateAvatar,
 } = require("../../controllers/authControllers");
 
 const {
@@ -36,7 +36,7 @@ router.patch(
   "/current/avatars",
   auth,
   upload.single("avatar"),
-  ctrlUpdateAvatart
+  ctrlUpdateAvatar
 );
 
 router.get("/logout", auth, ctrlLogout);
