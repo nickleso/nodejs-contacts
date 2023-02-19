@@ -5,12 +5,14 @@ const jwt = require("jsonwebtoken");
 
 const gravatar = require("gravatar");
 const resizedAvatar = require("../helpers/imageResizer");
+const avatarsDir = path.join(__dirname, "../", "public", "avatars");
+
+const { uid } = require("uid");
+const { User } = require("../models/userModels");
+const sendEmail = require("../helpers/sengridEmail");
 
 require("dotenv").config();
 const SECRET_KEY = process.env.SECRET;
-const avatarsDir = path.join(__dirname, "../", "public", "avatars");
-
-const { User } = require("../models/userModels");
 
 const ctrlSignup = async (req, res, next) => {
   try {
@@ -24,20 +26,36 @@ const ctrlSignup = async (req, res, next) => {
       });
     }
 
+    const verificationToken = uid();
     const avatarURL = gravatar.url(email);
     const hashPassword = bcrypt.hashSync(password, bcrypt.genSaltSync(10));
 
-    await User.create({ name, email, password: hashPassword, avatarURL });
+    await User.create({
+      name,
+      email,
+      password: hashPassword,
+      avatarURL,
+      verificationToken,
+    });
+
+    const mail = {
+      to: email,
+      subject: "Email submission",
+      html: `<a target="_blank" href="http://localhost:3000/api/users/verify/${verificationToken}">Submit email</a>`,
+    };
+
+    await sendEmail(mail);
 
     res.json({
       status: "Created",
       code: 201,
-      message: "Registration successful",
+      message: "Registration successful and verification email sent",
       data: {
         user: {
           name,
           email,
           avatarURL,
+          verificationToken,
         },
       },
     });
@@ -53,10 +71,10 @@ const ctrlLogin = async (req, res, next) => {
     const user = await User.findOne({ email });
     const validPassword = bcrypt.compareSync(password, user.password);
 
-    if (!user || !validPassword) {
+    if (!user || !user.verify || !validPassword) {
       return res.status(401).json({
         code: 401,
-        message: "Email or password is wrong",
+        message: "Email or password is wrong, or email is not verified",
       });
     }
 
@@ -168,6 +186,63 @@ const ctrlUpdateAvatar = async (req, res, next) => {
   }
 };
 
+const ctrlVerifyEmail = async (req, res, next) => {
+  const { verificationToken } = req.params;
+  const user = await User.findOne({ verificationToken });
+
+  if (!user) {
+    return res.status(404).json({
+      code: 404,
+      message: "User not found or email is already verified",
+    });
+  }
+
+  await User.findByIdAndUpdate(user._id, {
+    verify: true,
+    verificationToken: null,
+  });
+
+  res.json({
+    status: "Verification success",
+    code: 200,
+  });
+};
+
+const ctrlVerifyEmailRepeat = async (req, res, next) => {
+  const { email } = req.body;
+  const user = await User.findOne({ email });
+
+  const { verificationToken } = user;
+
+  if (!email) {
+    return res.status(400).json({
+      code: 400,
+      message: "Missing required field email",
+    });
+  }
+
+  if (user.verify) {
+    return res.status(400).json({
+      code: 400,
+      message: "Verification has already been passed",
+    });
+  }
+
+  const mail = {
+    to: email,
+    subject: "Email submission",
+    html: `<a target="_blank" href="http://localhost:3000/api/users/verify/${verificationToken}">Submit email</a>`,
+  };
+
+  await sendEmail(mail);
+
+  res.json({
+    status: "Ok",
+    code: 200,
+    message: "Verification email sent",
+  });
+};
+
 module.exports = {
   ctrlSignup,
   ctrlLogin,
@@ -175,4 +250,6 @@ module.exports = {
   ctrlLogout,
   ctrlUpdateCurrent,
   ctrlUpdateAvatar,
+  ctrlVerifyEmail,
+  ctrlVerifyEmailRepeat,
 };

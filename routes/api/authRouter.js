@@ -8,12 +8,15 @@ const {
   ctrlLogout,
   ctrlUpdateCurrent,
   ctrlUpdateAvatar,
+  ctrlVerifyEmail,
+  ctrlVerifyEmailRepeat,
 } = require("../../controllers/authControllers");
 
 const {
   addSignupValidation,
   addLoginValidation,
   addSubscriptionValidation,
+  addEmailValidation,
 } = require("../../middlewares/authValidation");
 
 const { auth } = require("../../middlewares/auth");
@@ -40,5 +43,9 @@ router.patch(
 );
 
 router.get("/logout", auth, ctrlLogout);
+
+router.get("/verify/:verificationToken", ctrlVerifyEmail);
+
+router.post("/verify", addEmailValidation, ctrlVerifyEmailRepeat);
 
 module.exports = router;
